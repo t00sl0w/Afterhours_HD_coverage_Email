@@ -1,0 +1,223 @@
+Option Explicit
+Sub f_test()
+
+End Sub
+
+Public Function get_TicketSize() As Integer
+    'returns max ticket row
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_TicketSize"
+    For i = 25 To 100
+        If Cells(i, 1).Value > 0 Then
+            c = i
+        Else
+            Exit For
+        End If
+    Next i
+    get_TicketSize = c
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_TicketNumber(maxR%) As String
+    'returns the current ticket number
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    c = 99
+    methodName = "analysisFuncs.get_TicketNumber"
+    For i = 25 To maxR
+        If Cells(i, 3).Value = "Ticket: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    If Trim(c) = 99 Then
+        get_TicketNumber = "Not Found"
+    Else
+        get_TicketNumber = Cells(c, 4).Value
+    End If
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_TicketType(maxR%) As String
+    'returns the subcatagory/type of the ticket
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_TicketType"
+    For i = 25 To maxR
+        If Cells(i, 3).Value = "SubCategory: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    get_TicketType = Cells(c, 4).Value
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_DateReceived(maxR%) As String
+    'returns the date received of the ticket
+    Dim i%, c%, thold() As String
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_DateReceived"
+    For i = 25 To maxR
+        If Cells(i, 3).Value = "Received: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    thold = Split(Cells(c, 4).Value, " ")
+    get_DateReceived = Left(thold(1), (Len(thold(1)) - 3)) & " " & thold(2)
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_DateCompleted(maxR%) As String
+    'returns the date completed of the ticket
+    Dim i%, c%, thold() As String
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_DateCompleted"
+    For i = 25 To maxR
+        If Cells(i, 3).Value = "Completed: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    If Cells(c, 4).Value = "" Then
+        get_DateCompleted = "Not Completed"
+    Else
+        thold = Split(Cells(c, 4).Value, " ")
+        get_DateCompleted = Left(thold(1), (Len(thold(1)) - 3)) & " " & thold(2)
+    End If
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_RequestorName(maxR%) As String
+    'returns the requestor of the ticket
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_RequestorName"
+    For i = 25 To maxR
+        If Cells(i, 1).Value = "Requester: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    get_RequestorName = Cells(c, 2).Value
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_RequestorLocation(maxR%) As String
+    'returns the requestor of the ticket
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_RequestorLocation"
+    For i = 25 To maxR
+        If Cells(i, 1).Value = "Location: " Then
+            c = i
+            Exit For
+        Else
+        End If
+    Next i
+    get_RequestorLocation = Cells(c, 2).Value
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_TicketStatus(maxR%) As String
+    'returns the status and technician name if ticket status is deferred
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "analysisFuncs.get_TicketStatus"
+    For i = 25 To maxR
+        If Cells(i, 4).Value = " DEFERRED" Then
+            c = i
+            get_TicketStatus = "TICKET DEFERRED TO" & Cells(30, 4).Value
+            Exit For
+        Else
+        get_TicketStatus = "NotDeferred"
+        End If
+    Next i
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function get_TicketHistory(maxR%)
+    'returns and builds the ticket history
+    'TEMPORARY CODE, will be refactored
+    Dim i%, c%, j%, s%
+    Dim thold() As String, bhold() As String, dhold() As String, s_inprog$, s_comp$, s_return$, s_temp$, s_note$
+    Dim s_reasign$, methodName$
+    On Error Resume Next
+    methodName = "analysisFuncs.get_TicketHistory"
+    ReDim thold(0)
+    ReDim bhold(0)
+    j = 9
+    s = get_TicketSize
+    'thold = holds raw note lines
+    'bhold = note lines to use
+    'dhold = note line splits for creating email note lines without user name
+    s_inprog = "Status updated to "
+    s_reasign = "Ticket reassigned to "
+    '--add defer to ticket
+    If Not get_TicketStatus(s) = "NotDeferred" Then
+        ReDim Preserve thold(UBound(thold) + 1)
+        thold(UBound(thold)) = "-" & get_TicketStatus(s)
+    Else: End If
+    '--build notes
+    For i = 40 To maxR Step 1
+        If Cells(i, 1).Value <> "" Then '= "***"
+            ReDim Preserve thold(UBound(thold) + 1)
+            thold(UBound(thold)) = Cells(i, 1).Value
+        Else: End If
+    Next i
+    For i = LBound(thold) To UBound(thold)
+        If thold(i) <> "" Then
+            If Left$(thold(i), 3) = "***" Then
+                If InStr(1, thold(i), s_inprog) = 0 And InStr(1, thold(i), s_inprog) = 0 And InStr(1, thold(i), s_reasign) = 0 Then
+                    dhold = Split(thold(i), "-")
+                    For c = 1 To UBound(dhold)
+                        s_temp = s_temp & dhold(c)
+                    Next c
+                Else: End If
+            Else
+                If thold(i) <> "" Then
+                    s_temp = s_temp & thold(i)
+                Else: End If
+            End If
+        Else: End If
+        If s_temp <> "" Then
+            Cells(j, 1).Value = s_temp
+            s_temp = ""
+            j = j + 1
+        Else: End If
+    Next i
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
