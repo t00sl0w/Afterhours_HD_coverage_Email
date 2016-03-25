@@ -1,0 +1,156 @@
+Option Explicit
+
+Sub test45()
+
+End Sub
+
+Public Function e_findPrevSize() As Integer
+    'returns max email preview row
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "emailFuncs.e_findPrevSize"
+    For i = 3 To 24
+        If Sheets("main").Cells(i, 1).Value > 0 Then
+            c = i
+        Else
+            Exit For
+        End If
+    Next i
+    e_findPrevSize = c
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function e_NextEmailSpot() As Integer
+    'returns the row number for the next email text starting position
+    Dim i%, c%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "emailFuncs.e_NextEmailSpot"
+    For i = 3 To 1000
+        If Sheets("email_build").Cells(i, 1).Value = "" Then
+            If Sheets("email_build").Cells(i + 5, 1).Value = "" Then
+                Exit For
+            Else: End If
+        Else: End If
+    Next i
+    e_NextEmailSpot = i + 1
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function e_movePrevToEmBuild()
+    'moves email preview to email_build sheet and increases ticket count by one
+    Dim i%, emStartLoc%, emPreMR%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "emailFuncs.e_movePrevToEmBuild"
+    emPreMR = e_findPrevSize()
+    emStartLoc = e_NextEmailSpot()
+    For i = 3 To emPreMR
+         Sheets("email_build").Cells(emStartLoc, 1).Value = Sheets("main").Cells(i, 1).Value
+         emStartLoc = emStartLoc + 1
+    Next i
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function e_ClearEmailBuild()
+    'clears the email build tab
+    Dim i%, emMaxSize%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "emailFuncs.e_ClearEmailBuild"
+    emMaxSize = e_NextEmailSpot()
+    For i = 3 To emMaxSize
+        Sheets("email_build").Cells(i, 1).Value = ""
+    Next i
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function e_buildToList() As String
+    'builds "to" list for email from distrobution list
+    Dim i%, emMaxSize%, toLine$
+    Dim methodName As String, filepath As String, strLine$
+    On Error Resume Next
+    methodName = "emailFuncs.e_buildToList"
+    filepath = "J:\SHARED\justin_folder\EDRS_HD\HD_email\email_distro_list.txt"
+    'open file to view/create distro list from current contents
+        Open filepath For Input As #1
+        While EOF(1) = False
+            Line Input #1, strLine
+            If Left$(strLine, 2) <> "//" Then
+                toLine = toLine & strLine & ";"
+            Else: End If
+        Wend
+        Close #1
+    e_buildToList = toLine
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Sub run_buildEmail()
+    'IF running email tests, type "test" in field O1 on the main tab
+    Dim olApp As Object, outapp As Object, outmail As Object, thold As String, tsig$, i%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "emailFuncs.run_buildEmail"
+    Set olApp = GetObject(, "Outlook.Application")
+    On Error GoTo 0
+    If Not olApp Is Nothing Then
+        'Outlook is open!
+    Else
+        'Outlook not open
+        Shell ("OUTLOOK")
+    End If
+    'end check outlook
+    'open new mail
+    Set outapp = CreateObject("Outlook.Application")
+    outapp.Session.Logon
+    Set outmail = outapp.CreateItem(0)
+    On Error Resume Next
+    
+    With outmail
+        .To = emailFuncs.e_buildToList
+        .CC = ""
+        .Subject = "HelpDesk Tickets Received on  " & Format$(Date, "mm-dd-yyyy")
+        .BodyFormat = outapp.OlBodyFormat.olFormatHTML
+        .Text
+        .display
+        'build email body
+        tsig = .htmlbody
+        .htmlbody = ""
+        If Sheets("email_build").Cells(5, 1).Value = "" Then
+            .htmlbody = "<br> <font color = " & Chr(34) & "red" & Chr(34) & ">" & "There were no tickets created/Calls received." & "</font>"
+        Else
+            For i = 3 To emailFuncs.e_NextEmailSpot()
+                If i = 3 Then
+                    .htmlbody = Sheets("email_build").Cells(i, 1).Value
+                Else
+                    If InStr(1, Sheets("email_build").Cells(i, 1).Value, " DEFERRED ") = 0 Then
+                        ' <font color = " & Chr(34) & "red" & Chr(34) & ">" & "</font>"
+                        .htmlbody = .htmlbody & "<br>" & Sheets("email_build").Cells(i, 1).Value
+                    Else
+                        .htmlbody = .htmlbody & "<br> <font color = " & Chr(34) & "red" & Chr(34) & ">" & Sheets("email_build").Cells(i, 1).Value & "</font>"
+                    End If
+                End If
+            Next i
+        End If
+        .htmlbody = .htmlbody & tsig
+    End With
+    On Error GoTo 0
+    outapp.Session.Logoff
+    Set outmail = Nothing
+    Set outapp = Nothing
+    Call fileWrite.recordEmailTimeLog
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
