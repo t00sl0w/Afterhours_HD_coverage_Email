@@ -1,0 +1,44 @@
+Option Explicit
+
+Public Function f_ticketCount()
+    'Dim i%
+    'If Sheets("email_build").Cells(4, 1).Value = "" Then
+    '   Sheets("main").Cells(2, 5).Value = "1"
+    'Else
+    '    Sheets("main").Cells(2, 5).Value = Sheets("main").Cells(2, 5).Value + 1
+    'End If
+End Function
+
+Public Function f_errorLogging()
+    
+End Function
+
+Sub exportData()
+    'not complete
+    Dim filepath As String, CellData() As String, writeMe As String
+    Dim r, c, lastR, i, lastC As Long
+    ReDim CellData(6)
+    lastR = 10800
+    lastC = 7
+    filepath = "J:\SHARED\justin_folder\EDRS_HD\logs\HD_email_log.txt"
+    If filepath = "" Then Exit Sub
+    Open filepath For Output As #2
+
+    For r = 1 To lastR
+        c = 1
+        If Sheets("Sheet2").Range(Cells(r, c).Address).Value = "" Then
+            Exit For
+        Else
+            For c = 1 To lastC
+                CellData(c - 1) = Sheets("Sheet2").Range(Cells(r, c).Address).Value
+            Next c
+            writeMe = CellData(0) & "|" & CellData(1) & "|" & CellData(2) & "|" & CellData(3) & "|" & CellData(4) & _
+                "|" & CellData(5) & "|" & CellData(6)
+            Print #2, writeMe
+        End If
+    Next r
+
+fastForward:
+    Close #2
+
+End Sub
