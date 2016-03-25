@@ -1,0 +1,179 @@
+Option Explicit
+'coded by justin stevenson x1156 and used by eVitals HelpDesk
+'interface created by jason mundy x1018
+
+Sub main_test()
+
+End Sub
+
+Sub Page_main()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.Page_main"
+    Sheets("main").Select
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+Sub Page_email_build()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.Page_email_build"
+    Sheets("email_build").Select
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+Sub Page_email_addresses()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.Page_email_addresses"
+    Sheets("email_addresses").Select
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+Sub m_prevTicket()
+    'breaks down ticket and creates preview for the ticket info that will be used in email
+    Dim t_num$, t_size%
+    Dim t_type$, t_recDate$, t_compDate$, t_requestor$, t_location$, t_notes$, methodName$
+    methodName = "main.m_prevTicket"
+    On Error Resume Next
+    If Sheets("main").Cells(25, 1).Value = "Paste Ticket Information Here" Then
+        MsgBox ("Please Paste the Raw ticket Information in the correct location before continuing")
+    Else
+        t_size = analysisFuncs.get_TicketSize()
+        t_num = analysisFuncs.get_TicketNumber(t_size)
+        If Trim(t_num) = "Not Found" Then
+            MsgBox ("Please Copy and Paste the Correct Values based on the directions")
+            Exit Sub
+        Else
+        End If
+        t_type = analysisFuncs.get_TicketType(t_size)
+        t_recDate = analysisFuncs.get_DateReceived(t_size)
+        t_compDate = analysisFuncs.get_DateCompleted(t_size)
+        t_requestor = analysisFuncs.get_RequestorName(t_size)
+        t_location = analysisFuncs.get_RequestorLocation(t_size)
+    
+        'Call miscFuncs.f_ticketCount
+        Cells(3, 1).Value = "Ticket " & Sheets("main").Cells(2, 5).Value + 1 & " - " & t_num
+        Cells(4, 1).Value = "Type: " & t_type
+        Cells(5, 1).Value = "Received: " & t_recDate & "      Completed: " & t_compDate
+        Cells(6, 1).Value = "Name: " & t_requestor
+        Cells(7, 1).Value = "Location: " & t_location
+        Cells(8, 1).Value = "----Ticket Notes----"
+        'notes are not assigned a var, they are dumped into the email preview by calling this func
+        Call analysisFuncs.get_TicketHistory(t_size)
+        Sheets("main").Range("E1").Value = 4
+    End If
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Sub m_movePrevToEmail()
+    'moves the email text preview to the email build page
+    'also deletes current email text preview and raw ticket information
+    Application.ScreenUpdating = False
+    Dim t_num As Long, t_size%
+    Dim t_type$, t_recDate$, t_compDate$, t_requestor$, t_location$, t_notes$, methodName$
+    methodName = "main.m_movePrevToEmail"
+    On Error Resume Next
+    If Sheets("main").Cells(25, 1).Value = "Paste Ticket Information Here" Then
+        MsgBox ("Please Paste the Raw ticket Information in the correct location before continuing")
+    ElseIf Sheets("main").Cells(3, 1).Value = "" Then
+        MsgBox ("Please Click the [Email Text Preview] button before continuing")
+    Else
+    
+    Call emailFuncs.e_movePrevToEmBuild
+    Call f_m_clearPreview
+    Call f_m_clearTicketRaw
+    Range("E1").FormulaR1C1 = "=IF(R[25]C[-4]="""",1,3)"
+    Range("A25").Select
+    End If
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+    Application.ScreenUpdating = True
+End Sub
+
+Sub run_ClearPreview()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.run_ClearPreview"
+    Call f_m_clearPreview
+    Range("E1").FormulaR1C1 = "=IF(R[25]C[-4]="""",1,3)"
+    Range("A25").Select
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Sub run_ClearTicketRaw()
+    Application.ScreenUpdating = False
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.run_ClearTicketRaw"
+    Call f_m_clearTicketRaw
+    Range("E1").FormulaR1C1 = "=IF(R[25]C[-4]="""",1,3)"
+    Range("A25").Select
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+    Application.ScreenUpdating = True
+End Sub
+
+Sub run_ClearEmailBuild_start()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.run_ClearEmailBuild_start"
+    Sheets("CLEARemail_build").Show
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Sub run_ClearEmailBuild()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.run_ClearEmailBuild"
+    Call emailFuncs.e_ClearEmailBuild
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Public Function f_m_clearPreview()
+    'clears the email text preview
+    Dim i%, maxpsize%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.f_m_clearPreview"
+    maxpsize = emailFuncs.e_findPrevSize
+    For i = 3 To maxpsize
+        Cells(i, 1).Value = ""
+    Next i
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function f_m_clearTicketRaw()
+    'clears the raw ticket dump
+    Dim i%, maxTsize%
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "main.f_m_clearTicketRaw"
+    maxTsize = analysisFuncs.get_TicketSize
+    For i = 15 To maxTsize
+        Cells(i, 1).Value = ""
+        Cells(i, 2).Value = ""
+        Cells(i, 3).Value = ""
+        Cells(i, 4).Value = ""
+    Next i
+    Sheets("main").Range("a25").Interior.ColorIndex = 37
+    Sheets("main").Range("a25").Value = "Paste Ticket Information Here"
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
