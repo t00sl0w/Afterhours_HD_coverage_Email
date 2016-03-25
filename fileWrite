@@ -1,0 +1,83 @@
+Option Explicit
+'sub routines and functions in here are used strictly for writing to txt logs
+
+Sub ShowChangeLog()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "fileWrite.ShowChangeLog"
+    Call Shell("C:\WINDOWS\notepad.exe J:\SHARED\justin_folder\EDRS_HD\HD_email\changelog.txt", vbNormalFocus)
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Sub ShowDistroList()
+    Dim methodName As String
+    On Error Resume Next
+    methodName = "fileWrite.ShowDistroList"
+    Call Shell("C:\WINDOWS\notepad.exe J:\SHARED\justin_folder\EDRS_HD\HD_email\email_distro_list.txt", vbNormalFocus)
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Sub
+
+Public Function GetVersionNumber() As String
+    'returns the version number recorded on the main tab
+    Dim arrGetVerNum() As String
+    arrGetVerNum = Split(Sheets("main").Cells(1, 1).Value, ":")
+    GetVersionNumber = Trim(arrGetVerNum(1))
+End Function
+
+Public Function recordEmailTimeLog()
+    'records date/time email sent to hd distro group
+    Dim filepath As String, fileData As String, writeMe As String, strLine$
+    Dim methodName As String, verNum As String
+    On Error Resume Next
+    verNum = Sheets("main").Cells(1, 1).Value
+    methodName = "fileWrite.recordEmailTimeLog"
+    filepath = "J:\SHARED\justin_folder\EDRS_HD\HD_email\logs\HD_email_log.txt"
+    If Not LCase(Sheets("main").Cells(1, 15).Value) = "test" Then
+    'open file to store current contents
+        Open filepath For Input As #1
+        While EOF(1) = False
+            Line Input #1, strLine
+            fileData = fileData & strLine & vbCrLf
+        Wend
+    fileData = fileData & "--$HD Email Sent to distro group at " & Now() & " by " & Environ("USERNAME") & " \ Version: " & GetVersionNumber
+    'ouput data to file
+        Close #1
+        Open filepath For Output As #2
+        writeMe = fileData
+        Print #2, writeMe
+        Close #2
+    Else: End If
+    fileData = vbNullString
+    If Err.Number > 0 Then
+        Call fileWrite.recordErrorLog(methodName, Err.Number, Err.Description)
+    End If
+End Function
+
+Public Function recordErrorLog(pMethodName$, pErrorNumber$, pErrorDescription$)
+    'records error in error log with date/time and error number.
+    '"Function:" & methodName & " ErrorNumber:" & Err.Number & " ErrorDescription:" & Err.Description
+    Dim filepath As String, fileData As String, writeMe As String, strLine$
+    filepath = "J:\SHARED\justin_folder\EDRS_HD\HD_email\logs\HD_error_log.txt"
+    If Not LCase(Sheets("main").Cells(1, 15).Value) = "test" Then
+    'open file to store current contents
+        Open filepath For Input As #1
+        While EOF(1) = False
+            Line Input #1, strLine
+            fileData = fileData & strLine & vbCrLf
+        Wend
+    fileData = fileData & "--$" & Now() & " " & "Function:" & pMethodName & " ErrorNumber:" & pErrorNumber & " ErrorDescription:" & pErrorDescription & " " & " \ Version: " & GetVersionNumber
+    'ouput data to file
+        Close #1
+        Open filepath For Output As #2
+        writeMe = fileData
+        Print #2, writeMe
+        Close #2
+    fileData = vbNullString
+    Else
+        MsgBox ("Error Encountered: " & "Function:" & pMethodName & " ErrorNumber:" & pErrorNumber & " ErrorDescription:" & pErrorDescription & " " & " \ Version: " & GetVersionNumber)
+    End If
+End Function
